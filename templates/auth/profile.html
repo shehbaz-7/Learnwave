@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h1 class="mb-4"><i class="fas fa-user-cog text-primary"></i> Profile & Settings</h1>
+        <div class="card mb-4">
+            <div class="card-header">Account Information</div>
+            <div class="card-body">
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                {% if not is_admin %}
+                <p><strong>Current Year:</strong> <span class="badge bg-info">{{ current_year }}</span></p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if not is_admin %}
+        <div class="card mb-4">
+            <div class="card-header">Change Your Year</div>
+            <div class="card-body">
+                <p class="text-muted">Changing your year will wipe your current local library and require an application restart to sync the new data.</p>
+                <form id="changeYearForm" action="{{ url_for('main.change_year') }}" method="POST">
+                    <div class="input-group">
+                        <select class="form-select" name="new_year">
+                            <option value="FirstYear" {% if current_year == 'FirstYear' %}selected{% endif %}>First Year</option>
+                            <option value="SecondYear" {% if current_year == 'SecondYear' %}selected{% endif %}>Second Year</option>
+                            <option value="ThirdYear" {% if current_year == 'ThirdYear' %}selected{% endif %}>Third Year</option>
+                            <option value="FourthYear" {% if current_year == 'FourthYear' %}selected{% endif %}>Fourth Year</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">Change Year</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-4">
+            <div class="card-header"><i class="fas fa-key me-2"></i>Gemini API Key</div>
+            <div class="card-body">
+                <p><strong>Status:</strong>
+                    {% if api_key_set %}<span class="badge bg-success"><i class="fas fa-check me-1"></i>Configured</span>
+                    {% else %}<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Not Set</span>{% endif %}
+                </p>
+                <form method="POST" action="{{ url_for('auth.update_api_key') }}">
+                    <div class="mb-3">
+                        <label for="gemini_api_key" class="form-label">Update API Key</label>
+                        <input type="password" class="form-control" id="gemini_api_key" name="gemini_api_key" placeholder="Enter new Gemini API key..." required>
+                        <div class="form-text">Your key is stored locally and is never synced.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Key</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-danger">
+            <div class="card-header bg-danger-subtle text-danger-emphasis"><i class="fas fa-triangle-exclamation me-2"></i>Danger Zone</div>
+            <div class="card-body">
+                <p class="text-muted">This action affects your local copy of the library and will require a restart.</p>
+                <div class="d-flex gap-2">
+                    <button id="deleteDataBtn" class="btn btn-danger"><i class="fas fa-trash-alt me-2"></i>Wipe and Resync Library</button>
+                </div>
+                <div class="form-text mt-1">
+                    <strong>Wipe and Resync Library:</strong> Deletes your currently synced library (PDFs, search index, etc.). You must restart the app to re-download everything. Your account, API key, and year selection are preserved.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="restartModal" tabindex="-1" aria-labelledby="restartModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="restartModalLabel"><i class="fas fa-power-off me-2 text-warning"></i>Restart Required</h5>
+      </div>
+      <div class="modal-body">
+        <p>The operation was successful. Please close and restart Learnwave for the changes to take effect.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const restartModal = new bootstrap.Modal(document.getElementById('restartModal'));
+
+    function handleFormSubmit(form, confirmMessage) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (confirm(confirmMessage)) {
+                const button = form.querySelector('button[type="submit"]');
+                button.disabled = true;
+                const formData = new FormData(form);
+                fetch(form.action, {
+                    method: 'POST',
+                    body: new URLSearchParams(formData)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'restart_required') {
+                        restartModal.show();
+                    } else {
+                        alert('An error occurred: ' + (data.message || 'Unknown error'));
+                    }
+                }).catch(err => {
+                    alert('A network error occurred.');
+                }).finally(() => {
+                    button.disabled = false;
+                });
+            }
+        });
+    }
+
+    const changeYearForm = document.getElementById('changeYearForm');
+    if (changeYearForm) {
+        handleFormSubmit(changeYearForm, 'Are you sure you want to change your year? This will wipe your current local library and require a restart.');
+    }
+
+    const deleteDataBtn = document.getElementById('deleteDataBtn');
+    deleteDataBtn.addEventListener('click', function() {
+        if (confirm('DANGER: Are you sure you want to delete your local library data? The application will need to be restarted to re-sync all files.')) {
+            this.disabled = true;
+            this.innerHTML = "Wiping...";
+            fetch("{{ url_for('main.delete_local_data') }}", { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'restart_required') {
+                        restartModal.show();
+                    } else {
+                        alert('An error occurred: ' + (data.message || 'Unknown error'));
+                    }
+                }).catch(err => {
+                    alert('A network error occurred.');
+                }).finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-trash-alt me-2"></i>Wipe and Resync Library';
+                });
+        }
+    });
+});
+</script>
+{% endblock %}
