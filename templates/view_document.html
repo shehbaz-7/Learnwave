@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{{ document.original_filename }}{% endblock %}
+
+{% block head_extra %}
+{% if document.doc_type == 'pdf' %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;</script>
+<style>
+    #pdf-viewer-container { height: 85vh; overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #3c4043; text-align: center; }
+    #pdf-canvas { margin: 1rem auto; display: block; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); }
+    #pdf-controls { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 8px; }
+</style>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0 text-truncate">
+        {% if document.doc_type == 'pdf' %}
+            <i class="fas fa-file-pdf text-danger"></i>
+        {% else %}
+            <i class="fab fa-youtube text-danger"></i>
+        {% endif %}
+        {{ document.original_filename }}
+    </h3>
+</div>
+
+<!-- Main Content Viewer -->
+{% if document.doc_type == 'pdf' %}
+    <div id="pdf-controls" class="d-flex justify-content-center align-items-center gap-3 mb-3 sticky-top">
+        <button id="prev-page" class="btn btn-primary"><i class="fas fa-arrow-left"></i></button>
+        <div class="d-flex align-items-center">
+            <span>Page:</span><input type="number" id="page-select" class="form-control mx-2" style="width: 80px; text-align: center;"><span>/ <span id="page-count"></span></span>
+        </div>
+        <button id="next-page" class="btn btn-primary"><i class="fas fa-arrow-right"></i></button>
+        <div class="vr"></div>
+        <button id="zoom-out" class="btn btn-secondary"><i class="fas fa-search-minus"></i></button>
+        <button id="zoom-in" class="btn btn-secondary"><i class="fas fa-search-plus"></i></button>
+    </div>
+    <div id="pdf-viewer-container"><canvas id="pdf-canvas"></canvas></div>
+{% else %} {# This part is for YouTube videos #}
+    {% if embed_url %}
+    <div class="ratio ratio-16x9">
+        <iframe src="{{ embed_url }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+    {% else %}
+    <div class="alert alert-danger">Could not parse the YouTube video URL.</div>
+    {% endif %}
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if document.doc_type == 'pdf' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const url = "{{ url_for('main.serve_pdf', doc_id=document.id) }}";
+    const container = document.getElementById('pdf-viewer-container');
+    const canvas = document.getElementById('pdf-canvas');
+    const pageNumInput = document.getElementById('page-select');
+    const pageCountSpan = document.getElementById('page-count');
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+
+    let pdfDoc = null, pageNum = 1, currentScale = 1.0;
+
+    function renderPage(num, scale) {
+        pdfDoc.getPage(num).then(page => {
+            let viewport;
+            if (scale === 'fit') {
+                const containerWidth = container.clientWidth * 0.95;
+                viewport = page.getViewport({ scale: 1 });
+                currentScale = containerWidth / viewport.width;
+                viewport = page.getViewport({ scale: currentScale });
+            } else {
+                viewport = page.getViewport({ scale: scale });
+                currentScale = scale;
+            }
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            page.render({ canvasContext: context, viewport: viewport });
+            pageNumInput.value = num;
+        });
+    }
+
+    pdfjsLib.getDocument(url).promise.then(doc => {
+        pdfDoc = doc;
+        pageCountSpan.textContent = pdfDoc.numPages;
+        pageNum = window.location.hash.startsWith('#page=') ? parseInt(window.location.hash.substring(6), 10) : 1;
+        if (pageNum < 1 || pageNum > pdfDoc.numPages) pageNum = 1;
+        renderPage(pageNum, 'fit');
+    });
+
+    prevBtn.addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum, currentScale); });
+    nextBtn.addEventListener('click', () => { if (pageNum < pdfDoc.numPages) renderPage(++pageNum, currentScale); });
+    pageNumInput.addEventListener('change', () => {
+        let desiredPage = parseInt(pageNumInput.value);
+        if (desiredPage >= 1 && desiredPage <= pdfDoc.numPages) renderPage(desiredPage, currentScale);
+    });
+    zoomInBtn.addEventListener('click', () => renderPage(pageNum, currentScale + 0.2));
+    zoomOutBtn.addEventListener('click', () => { if (currentScale > 0.3) renderPage(pageNum, currentScale - 0.2); });
+});
+</script>
+{% endif %}
+{% endblock %}

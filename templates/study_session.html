@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Study Session{% endblock %}
+
+{% block head_extra %}
+<style>
+    .study-session-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    /* --- START OF MODIFICATION: Flashcard Size --- */
+    .flashcard-deck {
+        perspective: 1500px;
+        min-height: 400px; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 0;
+    }
+    .flashcard {
+        width: 90%; /* Occupy a large portion of the container */
+        max-width: 600px; /* But not too wide on large screens */
+        height: 400px; /* Fixed taller height */
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.6s;
+        cursor: pointer;
+    }
+    /* --- END OF MODIFICATION --- */
+    .flashcard.is-flipped {
+        transform: rotateY(180deg);
+    }
+    .flashcard-front, .flashcard-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        display: flex;
+        flex-direction: column; 
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+        background-color: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        overflow-wrap: break-word; 
+        font-size: 1.2rem;
+    }
+    .flashcard-back {
+        transform: rotateY(180deg);
+        font-size: 1rem;
+    }
+    .quiz-option {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.5rem;
+        text-align: left;
+    }
+    .quiz-review-item.correct {
+        border-left: 5px solid #238636;
+    }
+     .quiz-review-item.incorrect {
+        border-left: 5px solid #da3633;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="study-session-container" id="study-session-container">
+    <!-- Content will be rendered here by JavaScript -->
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Loading study session...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const container = document.getElementById('study-session-container');
+    const setId = window.location.pathname.split('/').pop();
+    let currentSet = null;
+
+    function loadSession() {
+        const allSets = JSON.parse(localStorage.getItem('myStudySets') || '[]');
+        currentSet = allSets.find(s => s.id.toString() === setId);
+
+        if (!currentSet) {
+            container.innerHTML = `<div class="alert alert-danger">Study set not found. It may have been deleted.</div>`;
+            return;
+        }
+
+        if (currentSet.setType === 'quiz') {
+            renderQuiz();
+        } else if (currentSet.setType === 'flashcards') {
+            renderFlashcardDeck();
+        }
+    }
+
+    function renderQuiz() {
+        let quizHtml = `
+            <div class="text-center mb-4">
+                <h1>${currentSet.title}</h1>
+                <p class="text-muted">Answer all questions before submitting.</p>
+            </div>
+            <form id="quizForm">`;
+
+        currentSet.content.questions.forEach((q, index) => {
+            quizHtml += `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <p><strong>Question ${index + 1}:</strong> ${q.question_text}</p>
+                        <div class="list-group">
+                            ${q.options.map((opt, optIndex) => `
+                                <label class="list-group-item">
+                                    <input class="form-check-input me-1" type="radio" name="q${index}" value="${opt}">
+                                    ${opt}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>`;
+        });
+        
+        quizHtml += `
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">Submit Quiz</button>
+            </div></form>`;
+
+        container.innerHTML = quizHtml;
+        document.getElementById('quizForm').addEventListener('submit', handleQuizSubmit);
+    }
+    
+    function handleQuizSubmit(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const answers = Object.fromEntries(formData.entries());
+        let correctCount = 0;
+        
+        const reviewItems = currentSet.content.questions.map((q, index) => {
+            const userAnswer = answers[`q${index}`];
+            const isCorrect = userAnswer === q.correct_answer;
+            if (isCorrect) correctCount++;
+            return { question: q, userAnswer, isCorrect };
+        });
+
+        const allSets = JSON.parse(localStorage.getItem('myStudySets') || '[]');
+        const setIndex = allSets.findIndex(s => s.id === currentSet.id);
+        if (setIndex > -1) {
+            allSets[setIndex].score = { correct: correctCount, total: currentSet.content.questions.length };
+            localStorage.setItem('myStudySets', JSON.stringify(allSets));
+        }
+
+        renderQuizReview(reviewItems, correctCount);
+    }
+    
+    function renderQuizReview(reviewItems, correctCount) {
+        let reviewHtml = `
+            <div class="text-center mb-4">
+                <h1>Quiz Review</h1>
+                <h2>Your Score: ${correctCount} / ${reviewItems.length}</h2>
+                <a href="/my-space" class="btn btn-secondary mt-2">Back to My Space</a>
+            </div>`;
+
+        reviewItems.forEach((item, index) => {
+            const cardClass = item.isCorrect ? 'correct' : 'incorrect';
+            reviewHtml += `
+                <div class="card mb-3 quiz-review-item ${cardClass}">
+                    <div class="card-body">
+                        <p><strong>Question ${index + 1}:</strong> ${item.question.question_text}</p>
+                        <ul class="list-group">
+                            ${item.question.options.map(opt => {
+                                let itemClass = '';
+                                if (opt === item.question.correct_answer) {
+                                    itemClass = 'list-group-item-success';
+                                } else if (opt === item.userAnswer) {
+                                    itemClass = 'list-group-item-danger';
+                                }
+                                return `<li class="list-group-item ${itemClass}">${opt}</li>`;
+                            }).join('')}
+                        </ul>
+                        <div class="explanation-box mt-2 p-2 rounded small" style="background-color: var(--bg-primary);">
+                             <span class="spinner-border spinner-border-sm"></span> Getting explanation...
+                        </div>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = reviewHtml;
+        
+        document.querySelectorAll('.quiz-review-item').forEach((reviewElement, index) => {
+            const explanationBox = reviewElement.querySelector('.explanation-box');
+            fetchExplanation(reviewItems[index].question, explanationBox);
+        });
+    }
+
+    async function fetchExplanation(question, explanationBox) {
+         try {
+            const response = await fetch('/get_explanation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: question.question_text,
+                    correctAnswer: question.correct_answer,
+                    docId: currentSet.sourceDocId
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            explanationBox.innerHTML = `<i class="fas fa-info-circle me-1"></i> ${data.explanation}`;
+        } catch (error) {
+            explanationBox.innerHTML = `<span class="text-danger">Could not load explanation.</span>`;
+        }
+    }
+
+    function renderFlashcardDeck() {
+        let currentIndex = 0;
+        let flashcards = currentSet.content.flashcards;
+
+        function renderCard() {
+            const card = flashcards[currentIndex];
+            const deckHtml = `
+                <div class="text-center mb-4">
+                    <h1>${currentSet.title}</h1>
+                    <p class="text-muted">Click the card to flip it.</p>
+                </div>
+                <div class="flashcard-deck">
+                    <div class="flashcard">
+                        <div class="flashcard-front"><h3>${card.front}</h3></div>
+                        <div class="flashcard-back"><h4>${card.back}</h4></div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <button class="btn btn-secondary" id="prevCard" ${currentIndex === 0 ? 'disabled' : ''}><i class="fas fa-arrow-left"></i> Previous</button>
+                    <span class="text-muted">${currentIndex + 1} / ${flashcards.length}</span>
+                    <button class="btn btn-secondary" id="nextCard" ${currentIndex === flashcards.length - 1 ? 'disabled' : ''}>Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+                 <div class="text-center mt-3">
+                     <button class="btn btn-sm btn-outline-info" id="shuffleDeck"><i class="fas fa-random"></i> Shuffle Deck</button>
+                </div>`;
+            container.innerHTML = deckHtml;
+        }
+        
+        renderCard();
+
+        container.addEventListener('click', function(event) {
+            const card = event.target.closest('.flashcard');
+            if (card) {
+                card.classList.toggle('is-flipped');
+            }
+            if (event.target.id === 'prevCard') {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    renderCard();
+                }
+            }
+            if (event.target.id === 'nextCard') {
+                if (currentIndex < flashcards.length - 1) {
+                    currentIndex++;
+                    renderCard();
+                }
+            }
+            if (event.target.id === 'shuffleDeck') {
+                for (let i = flashcards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
+                }
+                currentIndex = 0;
+                renderCard();
+            }
+        });
+    }
+
+    loadSession();
+});
+</script>
+{% endblock %}

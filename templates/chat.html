@@ -1,0 +1,361 @@
+{% extends "chat_base.html" %}
+
+{% block title %}Chat with Nexus AI{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+{% endblock %}
+
+{% block content %}
+<div id="chat-container">
+    <div id="chat-header" class="d-flex justify-content-between align-items-center mb-4">
+        <div class="text-center flex-grow-1">
+            <h1 class="h2">Chat with Nexus</h1>
+        </div>
+        <button id="clear-chat-btn" class="btn btn-outline-danger btn-sm" title="Clear Chat History">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+
+    <div id="chatMessages">
+        {% if not history %}
+            <div class="d-flex justify-content-start mb-3">
+                <div class="chat-bubble chat-bubble-ai">Hi! I'm Nexus. You can filter my search for PDFs or Videos using the buttons below. How can I help?</div>
+            </div>
+        {% else %}
+            {% for msg in history %}
+                <div class="d-flex justify-content-end mb-3">
+                    <div class="chat-bubble chat-bubble-user">{{ msg.user_message }}</div>
+                </div>
+                {% if msg.ai_response %}
+                <div class="d-flex justify-content-start mb-3">
+                    <div class="chat-bubble chat-bubble-ai"
+                         data-sources='{{ msg.parsed_context|tojson|safe }}'
+                         data-raw-markdown='{{ msg.ai_response|tojson|safe }}'>
+                         {# Content will be populated by JavaScript #}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <div id="chat-input-container" class="mt-auto">
+        <div class="d-flex justify-content-center mb-2">
+            <div class="btn-group" role="group" id="search-filter-group">
+                <button type="button" class="btn btn-sm btn-outline-primary active" data-filter="all">All Content</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-filter="pdf">PDFs Only</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-filter="youtube">Videos Only</button>
+            </div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="chatInput" class="form-control form-control-lg" placeholder="Ask a question..." autocomplete="off">
+            <button class="btn btn-primary" id="sendButton">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+
+    function processAiResponse(rawMarkdown) {
+        if (!rawMarkdown) return '';
+        const citationRegex = /\[CITATION:(\d+):(\d+)\]/g;
+        let processedMarkdown = rawMarkdown.replace(citationRegex, (match, docId, pageNum) => {
+            return `<div class="citation-placeholder" data-doc-id="${docId}" data-page-num="${pageNum}"></div>`;
+        });
+        return marked.parse(processedMarkdown);
+    }
+    
+    function enhanceAiBubble(bubbleElement) {
+        // Add Copy buttons to code blocks
+        bubbleElement.querySelectorAll('pre code').forEach(codeBlock => {
+            const preElement = codeBlock.parentElement;
+            if (preElement.querySelector('.code-block-header')) return;
+            const header = document.createElement('div');
+            header.className = 'code-block-header';
+            const language = codeBlock.className.replace('language-', '').split(' ')[0] || 'code';
+            header.innerHTML = `<span class="language-display">${language}</span><button class="btn btn-sm btn-outline-secondary copy-btn"><i class="far fa-copy"></i> Copy</button>`;
+            const copyButton = header.querySelector('.copy-btn');
+            copyButton.addEventListener('click', () => {
+                navigator.clipboard.writeText(codeBlock.textContent).then(() => {
+                    copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    setTimeout(() => { copyButton.innerHTML = '<i class="far fa-copy"></i> Copy'; }, 2000);
+                });
+            });
+            preElement.parentNode.insertBefore(header, preElement);
+        });
+
+        const sources = JSON.parse(bubbleElement.dataset.sources || '[]');
+        const sourceMap = new Map(sources.map(s => [`${s.document_id}:${s.page_number}`, s]));
+        const placeholders = bubbleElement.querySelectorAll('.citation-placeholder');
+        const renderedCitations = new Set();
+        
+        if (placeholders.length > 0) {
+            const gridContainer = document.createElement('div');
+            gridContainer.className = 'citations-grid';
+            
+            const pdfRenderTasks = [];
+
+            placeholders.forEach(ph => {
+                const docId = ph.dataset.docId;
+                const pageNum = ph.dataset.pageNum;
+                const citationKey = `${docId}:${pageNum}`;
+
+                if (renderedCitations.has(citationKey)) {
+                    ph.remove();
+                    return;
+                }
+
+                const sourceInfo = sourceMap.get(citationKey);
+                if (!sourceInfo) return;
+
+                const tempDiv = document.createElement('div');
+                
+                if (sourceInfo.doc_type === 'youtube') {
+                    const videoIdMatch = sourceInfo.document_name.match(/YouTube - ([a-zA-Z0-9_-]{11})/);
+                    if (videoIdMatch) {
+                        const videoId = videoIdMatch[1];
+                        const totalSeconds = parseInt(sourceInfo.start_time_seconds || 0, 10);
+                        const videoUrl = `https://youtu.be/${videoId}?t=${totalSeconds}`;
+                        const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+                        const minutes = Math.floor(totalSeconds / 60);
+                        const seconds = totalSeconds % 60;
+                        const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                        // --- START OF MODIFICATION ---
+                        // Added js-youtube-player-trigger class and data attributes for the video ID and start time.
+                        tempDiv.innerHTML = `
+                            <div class="embedded-citation-viewer youtube-thumbnail-embed">
+                                <div class="citation-header">
+                                    <a href="${videoUrl}" target="_blank" rel="noopener noreferrer">
+                                        Source: Video at ${formattedTime}
+                                    </a>
+                                </div>
+                                <a href="${videoUrl}" target="_blank" rel="noopener noreferrer" class="youtube-thumbnail-link js-youtube-player-trigger" data-video-id="${videoId}" data-start-seconds="${totalSeconds}">
+                                    <img src="${thumbnailUrl}" alt="YouTube video thumbnail" style="width: 100%; height: auto; display: block; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+                                    <div class="youtube-play-icon">
+                                        <svg height="100%" version="1.1" viewBox="0 0 68 48" width="100%"><path class="ytp-large-play-button-bg" d="M66.52,7.74c-0.78-2.93-2.49-5.41-5.42-6.19C55.79,.13,34,0,34,0S12.21,.13,6.9,1.55 C3.97,2.33,2.27,4.81,1.48,7.74C0.06,13.05,0,24,0,24s0.06,10.95,1.48,16.26c0.78,2.93,2.49,5.41,5.42,6.19 C12.21,47.87,34,48,34,48s21.79-0.13,27.1-1.55c2.93-0.78,4.64-3.26,5.42-6.19C67.94,34.95,68,24,68,24S67.94,13.05,66.52,7.74z" fill="#f00"></path><path d="M 45,24 27,14 27,34" fill="#fff"></path></svg>
+                                    </div>
+                                </a>
+                            </div>`;
+                        // --- END OF MODIFICATION ---
+                        gridContainer.appendChild(tempDiv.firstElementChild);
+                    }
+                } else { // Handle PDF
+                    const randomInt = Math.floor(Math.random() * 100000);
+                    const canvasId = `canvas-${docId}-${pageNum}-${randomInt}`;
+                    tempDiv.innerHTML = `
+                        <div class="embedded-citation-viewer">
+                            <div class="citation-header">
+                                <a href="/document/${docId}#page=${pageNum}" target="_blank">
+                                    Source: Page ${pageNum}
+                                </a>
+                            </div>
+                            <canvas id="${canvasId}"></canvas>
+                        </div>`;
+                    gridContainer.appendChild(tempDiv.firstElementChild);
+                    pdfRenderTasks.push(() => {
+                        const canvasElement = document.getElementById(canvasId);
+                        renderPdfPageOnCanvas(docId, pageNum, canvasElement);
+                    });
+                }
+                
+                renderedCitations.add(citationKey);
+            });
+
+            bubbleElement.appendChild(gridContainer);
+            placeholders.forEach(p => p.remove());
+
+            requestAnimationFrame(() => {
+                pdfRenderTasks.forEach(task => task());
+            });
+        }
+
+        renderMathInElement(bubbleElement, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], throwOnError: false });
+    }
+
+    function renderPdfPageOnCanvas(docId, pageNumStr, canvas) {
+        if (!canvas) return;
+        const pageNum = parseInt(pageNumStr, 10);
+        if (isNaN(pageNum) || pageNum < 1) return;
+        
+        const url = `/uploads/${docId}`;
+        
+        pdfjsLib.getDocument(url).promise.then(pdfDoc => {
+            if (pageNum > pdfDoc.numPages) return;
+            pdfDoc.getPage(pageNum).then(page => {
+                const containerWidth = canvas.parentElement.clientWidth;
+                if (containerWidth <= 0) {
+                     console.error(`Canvas container for doc ${docId} page ${pageNum} has zero width.`);
+                     return;
+                }
+                const scale = containerWidth / page.getViewport({ scale: 1 }).width;
+                const viewport = page.getViewport({ scale: scale });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport });
+            });
+        }).catch(err => { 
+            console.error(`PDF.js error for URL ${url}:`, err); 
+            const errorDiv = canvas.parentElement;
+            if(errorDiv) errorDiv.innerHTML += '<div class="p-2 text-danger small">Error loading PDF page.</div>';
+        });
+    }
+    
+    function sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        if (!message) return;
+
+        const activeFilter = document.querySelector('#search-filter-group .btn.active').dataset.filter;
+
+        const chatMessages = document.getElementById('chatMessages');
+        const userBubble = `<div class="d-flex justify-content-end mb-3"><div class="chat-bubble chat-bubble-user">${message}</div></div>`;
+        chatMessages.insertAdjacentHTML('beforeend', userBubble);
+        input.value = '';
+        document.getElementById('sendButton').disabled = true;
+        showThinkingIndicator();
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        fetch("{{ url_for('main.chat_message') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message, filter: activeFilter })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(data => {
+            if (data.response) {
+                addAiChatMessage(data.response, data.context_pages);
+            } else {
+                addAiChatMessage('Sorry, an error occurred while processing the response.');
+            }
+        })
+        .catch((error) => {
+            console.error('Fetch Error:', error);
+            addAiChatMessage('Sorry, a connection error occurred.');
+        })
+        .finally(() => {
+            document.getElementById('sendButton').disabled = false;
+            hideThinkingIndicator();
+        });
+    }
+
+    function addAiChatMessage(rawMarkdown, context = []) {
+        const container = document.getElementById('chatMessages');
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble chat-bubble-ai';
+        bubble.dataset.sources = JSON.stringify(context);
+        bubble.innerHTML = processAiResponse(rawMarkdown);
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'd-flex justify-content-start mb-3';
+        wrapper.appendChild(bubble);
+        container.appendChild(wrapper);
+
+        enhanceAiBubble(bubble);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function showThinkingIndicator() {
+        const indicator = `<div id="thinking-indicator" class="d-flex justify-content-start mb-3"><div class="chat-bubble chat-bubble-ai"><div class="d-flex align-items-center"><span class="me-2">Nexus is thinking...</span><div class="spinner-border spinner-border-sm"></div></div></div></div>`;
+        document.getElementById('chatMessages').insertAdjacentHTML('beforeend', indicator);
+    }
+
+    function hideThinkingIndicator() {
+        document.getElementById('thinking-indicator')?.remove();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        marked.setOptions({ 
+            breaks: true, 
+            gfm: true,
+            highlight: function(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            }
+        });
+
+        // Initialize existing chat bubbles from history
+        document.querySelectorAll('.chat-bubble-ai[data-raw-markdown]').forEach(bubble => {
+            try {
+                const rawMarkdown = JSON.parse(bubble.dataset.rawMarkdown);
+                bubble.innerHTML = processAiResponse(rawMarkdown);
+                enhanceAiBubble(bubble);
+            } catch (e) {
+                console.error("Failed to parse raw markdown from history:", e);
+                bubble.innerHTML = "<p class='text-danger'>Error rendering this message.</p>";
+            }
+        });
+        
+        const chatMessages = document.getElementById('chatMessages');
+        if(chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        document.getElementById('chatInput').addEventListener('keypress', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
+        document.getElementById('sendButton').addEventListener('click', sendChatMessage);
+        document.getElementById('clear-chat-btn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear the entire chat history?')) {
+                fetch("{{ url_for('main.clear_chat_history') }}", { method: 'POST' })
+                .then(res => res.json())
+                .then(data => { if (data.status === 'success') window.location.reload(); });
+            }
+        });
+
+        document.querySelectorAll('#search-filter-group .btn').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelector('#search-filter-group .btn.active').classList.remove('active');
+                this.classList.add('active');
+            });
+        });
+
+        // --- START OF MODIFICATION ---
+        // Added event listener for the in-chat YouTube player.
+        const chatMessagesContainer = document.getElementById('chatMessages');
+        if (chatMessagesContainer) {
+            chatMessagesContainer.addEventListener('click', function(event) {
+                const trigger = event.target.closest('.js-youtube-player-trigger');
+                if (!trigger) return;
+
+                event.preventDefault(); // Stop navigation to YouTube
+
+                const videoId = trigger.dataset.videoId;
+                const startTime = trigger.dataset.startSeconds;
+                
+                // Find the parent container of the thumbnail to replace it
+                const parentContainer = trigger.closest('.embedded-citation-viewer');
+                if (!videoId || !parentContainer) return;
+
+                // Construct an autoplaying embed URL
+                const embedUrl = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1&rel=0`;
+
+                // Create the responsive wrapper and the iframe
+                const playerWrapper = document.createElement('div');
+                playerWrapper.className = 'youtube-player-wrapper';
+                playerWrapper.innerHTML = `
+                    <iframe
+                        src="${embedUrl}"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                    </iframe>`;
+
+                // Replace the thumbnail link (the trigger itself) with the new player wrapper
+                parentContainer.replaceChild(playerWrapper, trigger);
+            });
+        }
+        // --- END OF MODIFICATION ---
+    });
+</script>
+{% endblock %}

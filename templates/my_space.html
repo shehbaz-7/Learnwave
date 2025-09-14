@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}My Study Space{% endblock %}
+
+{% block head_extra %}
+<style>
+    .study-set-card {
+        transition: all 0.2s ease-in-out;
+    }
+    .study-set-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        border-color: var(--primary-accent);
+    }
+    .empty-space-placeholder {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 4rem;
+        text-align: center;
+    }
+    .section-header {
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-user-graduate text-primary"></i> My Study Space</h1>
+</div>
+
+<!-- Learning Paths Section -->
+<h2 class="section-header"><i class="fas fa-route text-success me-2"></i>Interactive Learning Paths</h2>
+<div id="learning-paths-container">
+    <!-- Learning paths will be dynamically inserted here -->
+</div>
+
+<!-- Study Sets Section -->
+<h2 class="section-header mt-5"><i class="fas fa-layer-group text-info me-2"></i>Quizzes & Flashcards</h2>
+<div id="study-sets-container">
+    <!-- Study sets will be dynamically inserted here -->
+</div>
+
+
+<div id="empty-space-placeholder" class="d-none mt-4">
+    <div class="empty-space-placeholder">
+        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">Your space is empty.</h4>
+        <p>Go to the <a href="{{ url_for('main.index') }}">Repository</a> to generate study sets or interactive learning paths from your documents.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const studySetsContainer = document.getElementById('study-sets-container');
+    const learningPathsContainer = document.getElementById('learning-paths-container');
+    const placeholder = document.getElementById('empty-space-placeholder');
+    
+    function checkAndShowPlaceholder() {
+        const hasStudySets = (JSON.parse(localStorage.getItem('myStudySets') || '[]')).length > 0;
+        const hasLearningPaths = (JSON.parse(localStorage.getItem('myLearningPaths') || '[]')).length > 0;
+        if (!hasStudySets && !hasLearningPaths) {
+            placeholder.classList.remove('d-none');
+        } else {
+            placeholder.classList.add('d-none');
+        }
+    }
+
+    function loadStudySets() {
+        const studySets = JSON.parse(localStorage.getItem('myStudySets') || '[]');
+        studySetsContainer.innerHTML = ''; 
+
+        const setsByDoc = studySets.reduce((acc, set) => {
+            acc[set.sourceDocId] = acc[set.sourceDocId] || { filename: set.sourceDocFilename, sets: [] };
+            acc[set.sourceDocId].sets.push(set);
+            return acc;
+        }, {});
+
+        if (Object.keys(setsByDoc).length === 0) {
+            studySetsContainer.innerHTML = '<p class="text-muted">No quizzes or flashcards generated yet.</p>';
+        }
+
+        for (const docId in setsByDoc) {
+            const group = setsByDoc[docId];
+            let groupHtml = `
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">${group.filename}</h5></div>
+                    <div class="list-group list-group-flush">`;
+            
+            group.sets.forEach(set => {
+                const icon = set.setType === 'quiz' ? 'fa-question-circle' : 'fa-clone';
+                const date = new Date(set.id).toLocaleString();
+                const scoreInfo = set.score !== undefined ? `<span class="badge bg-info">${set.score.correct}/${set.score.total}</span>` : '';
+
+                groupHtml += `
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas ${icon} me-2 text-primary"></i>
+                            <strong>${set.title}</strong>
+                            <small class="text-muted ms-2"> - Created on ${date}</small>
+                            ${scoreInfo}
+                        </div>
+                        <div>
+                            <a href="/study_session/${set.id}" class="btn btn-sm btn-primary">Start Session</a>
+                            <button class="btn btn-sm btn-outline-danger delete-set-btn" data-set-id="${set.id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>`;
+            });
+            groupHtml += `</div></div>`;
+            studySetsContainer.innerHTML += groupHtml;
+        }
+    }
+
+    function loadLearningPaths() {
+        const learningPaths = JSON.parse(localStorage.getItem('myLearningPaths') || '[]');
+        learningPathsContainer.innerHTML = '';
+
+        if (learningPaths.length === 0) {
+            learningPathsContainer.innerHTML = '<p class="text-muted">No learning paths generated yet.</p>';
+            return;
+        }
+
+        learningPaths.forEach(path => {
+            let statusHtml = '';
+            if (path.status === 'generating') {
+                statusHtml = `
+                    <div class="d-flex align-items-center">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        <span class="status-text">Generating...</span>
+                    </div>`;
+            } else if (path.status === 'complete') {
+                 statusHtml = `<a href="/learning-path/view/${path.id}" class="btn btn-sm btn-success">Start Learning</a>`;
+            } else if (path.status === 'failed') {
+                 const errorMessage = (path.error || 'Unknown error').replace(/"/g, '&quot;');
+                 statusHtml = `<span class="badge bg-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="${errorMessage}">Failed</span>`;
+            }
+
+            const pathHtml = `
+                <div class="card mb-3" id="learning-path-card-${path.sourceDocId}">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title mb-1">${path.pathData ? path.pathData.path_title : 'Learning Path'}</h5>
+                            <p class="card-text mb-0 text-muted">
+                                Source: ${path.sourceDocFilename}
+                            </p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                           <div class="status-container">${statusHtml}</div>
+                            <button class="btn btn-sm btn-outline-danger delete-path-btn" data-path-id="${path.id}" data-doc-id="${path.sourceDocId}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            learningPathsContainer.innerHTML += pathHtml;
+        });
+
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+
+    function deleteStudySet(setId) {
+        if (confirm('Are you sure you want to delete this study set?')) {
+            let studySets = JSON.parse(localStorage.getItem('myStudySets') || '[]');
+            studySets = studySets.filter(s => s.id.toString() !== setId);
+            localStorage.setItem('myStudySets', JSON.stringify(studySets));
+            loadStudySets();
+            checkAndShowPlaceholder();
+        }
+    }
+
+    async function deleteLearningPath(pathId, docId) {
+        // --- START OF FIX: Added confirm dialog ---
+        if (confirm('Are you sure you want to delete this learning path? This will also remove its cached data.')) {
+            let learningPaths = JSON.parse(localStorage.getItem('myLearningPaths') || '[]');
+            learningPaths = learningPaths.filter(p => p.id.toString() !== pathId);
+            localStorage.setItem('myLearningPaths', JSON.stringify(learningPaths));
+            
+            await fetch(`/learning-path/delete-cache/${docId}`, { method: 'POST' });
+
+            loadLearningPaths();
+            checkAndShowPlaceholder();
+        }
+        // --- END OF FIX ---
+    }
+    
+    studySetsContainer.addEventListener('click', function(event) {
+        const deleteBtn = event.target.closest('.delete-set-btn');
+        if (deleteBtn) deleteStudySet(deleteBtn.dataset.setId);
+    });
+
+    learningPathsContainer.addEventListener('click', function(event) {
+        const deleteBtn = event.target.closest('.delete-path-btn');
+        if (deleteBtn) deleteLearningPath(deleteBtn.dataset.pathId, deleteBtn.dataset.docId);
+    });
+
+    const eventSource = new EventSource("{{ url_for('main.status_updates') }}");
+    eventSource.onmessage = function (event) {
+        const statuses = JSON.parse(event.data);
+        let pathsNeedUpdate = false;
+        
+        const allPaths = JSON.parse(localStorage.getItem('myLearningPaths') || '[]');
+
+        allPaths.forEach(path => {
+            const statusKey = `learning_path_${path.sourceDocId}`;
+            const serverStatus = statuses[statusKey];
+
+            if (serverStatus && path.status === 'generating') {
+                pathsNeedUpdate = true;
+                const card = document.getElementById(`learning-path-card-${path.sourceDocId}`);
+                if (!card) return;
+
+                if (serverStatus.complete) {
+                    if (serverStatus.error) {
+                        path.status = 'failed';
+                        path.error = serverStatus.text;
+                    } else {
+                        path.status = 'complete';
+                        path.pathData = serverStatus.path_data;
+                    }
+                } else {
+                    const statusTextEl = card.querySelector('.status-text');
+                    if(statusTextEl) statusTextEl.textContent = serverStatus.text;
+                }
+            }
+        });
+
+        if (pathsNeedUpdate) {
+            localStorage.setItem('myLearningPaths', JSON.stringify(allPaths));
+            loadLearningPaths();
+        }
+    };
+    
+    // Initial Load
+    loadStudySets();
+    loadLearningPaths();
+    checkAndShowPlaceholder();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AI Learnwave - Initializing...</title>
+    
+    <!-- START: HYPER-MODERN LOADER STYLES -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
+
+        :root {
+            --glow-color: #BF40BF; /* Electric Orchid */
+            --font-mono: 'Roboto Mono', monospace;
+        }
+
+        @keyframes background-pan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            display: grid;
+            place-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: var(--font-mono);
+            background: linear-gradient(-45deg, #02041b, #0d0a24, #0f2d3a, #02041b);
+            background-size: 400% 400%;
+            animation: background-pan 20s ease infinite;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        #particles-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+            animation: float-up 10s infinite linear;
+        }
+        @keyframes float-up {
+            from { transform: translateY(100vh) scale(0); opacity: 1; }
+            to { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+        
+        @keyframes intro-animation {
+            from { opacity: 0; transform: perspective(1000px) rotateX(-20deg) scale(0.9); }
+            to { opacity: 1; transform: perspective(1000px) rotateX(0deg) scale(1); }
+        }
+        
+        .loader-box {
+            background: rgba(10, 10, 25, 0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 90%;
+            max-width: 480px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.05) inset;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: intro-animation 1s ease-out forwards;
+        }
+        
+        .loader-icon svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 1.5rem;
+        }
+
+        .rocket-path {
+            stroke: var(--glow-color);
+            stroke-width: 2;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw-in 3s ease-out forwards;
+        }
+
+        .rocket-glow {
+            fill: var(--glow-color);
+            opacity: 0;
+            animation: fill-in 1s ease forwards 2.5s, pulse 2s infinite 3.5s;
+        }
+
+        @keyframes draw-in { to { stroke-dashoffset: 0; } }
+        @keyframes fill-in { to { opacity: 0.6; } }
+        @keyframes pulse { 50% { opacity: 0.2; } }
+
+        .loading-title {
+            font-weight: 500;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+
+        #statusMessage {
+            min-height: 20px;
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+        
+        #cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1rem;
+            background: #fff;
+            animation: blink 1s step-end infinite;
+            vertical-align: bottom;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+    </style>
+    <!-- END: HYPER-MODERN LOADER STYLES -->
+</head>
+<body>
+    <div id="particles-container"></div>
+
+    <!-- START: NEW MARKUP -->
+    <div class="loader-box" id="loader-box">
+        <div class="loader-icon">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path class="rocket-path" d="M32 2L12 32.5V49C12 51.2 13.8 53 16 53H24V62L32 53L40 62V53H48C50.2 53 52 51.2 52 49V32.5L32 2Z"/>
+                <path class="rocket-glow" d="M24 45L20 57L32 49L44 57L40 45H24Z"/>
+            </svg>
+        </div>
+        <h3 class="loading-title">INITIALIZING Nexus AI ENGINE</h3>
+        <p><span id="statusMessage"></span><span id="cursor"></span></p>
+    </div>
+    <!-- END: NEW MARKUP -->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- 3D TILT EFFECT ---
+            const loaderBox = document.getElementById('loader-box');
+            loaderBox.addEventListener('mousemove', (e) => {
+                const rect = loaderBox.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -5;
+                const rotateY = ((x - centerX) / centerX) * 5;
+                loaderBox.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            });
+            loaderBox.addEventListener('mouseleave', () => {
+                loaderBox.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+            });
+
+            // --- PARTICLE EFFECT ---
+            const particlesContainer = document.getElementById('particles-container');
+            for(let i = 0; i < 50; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = `${Math.random() * 100}%`;
+                p.style.width = `${Math.random() * 3 + 1}px`;
+                p.style.height = p.style.width;
+                p.style.animationDelay = `${Math.random() * 10}s`;
+                particlesContainer.appendChild(p);
+            }
+
+            // --- TYPING EFFECT ---
+            const statusElement = document.getElementById('statusMessage');
+            let typeQueue = [];
+            let isTyping = false;
+            function typeWriter(text, onComplete) {
+                isTyping = true;
+                let i = 0;
+                let currentText = '';
+                function type() {
+                    if (i < text.length) {
+                        currentText += text.charAt(i);
+                        statusElement.innerHTML = currentText;
+                        i++;
+                        setTimeout(type, 30);
+                    } else {
+                        isTyping = false;
+                        if(onComplete) onComplete();
+                        processQueue();
+                    }
+                }
+                type();
+            }
+            function processQueue() {
+                if (typeQueue.length > 0 && !isTyping) {
+                    typeWriter(typeQueue.shift());
+                }
+            }
+            function updateStatusText(newText) {
+                if (statusElement.textContent === newText) return;
+                typeQueue.push(newText);
+                processQueue();
+            }
+            
+            // --- BACKEND STATUS CHECK (UNCHANGED LOGIC) ---
+            typeWriter("Contacting server...", () => {
+                let statusInterval = setInterval(() => {
+                    fetch('/status')
+                        .then(response => response.json())
+                        .then(data => {
+                            updateStatusText(data.message);
+                            if (data.status === 'error' || data.status === 'complete') {
+                                clearInterval(statusInterval);
+                                document.getElementById('cursor').style.display = 'none';
+                                if (data.status === 'complete') {
+                                    setTimeout(() => checkMainApp(), 500);
+                                }
+                            }
+                        })
+                        .catch(() => updateStatusText('Connection lost... Retrying'));
+                }, 1500);
+            });
+            function checkMainApp() {
+                updateStatusText("Engine ready. Final handshake...");
+                let readyInterval = setInterval(() => {
+                    fetch('/check-main-app')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.ready) {
+                                clearInterval(readyInterval);
+                                updateStatusText("Success. Engaging...");
+                                setTimeout(() => window.location.href = "http://127.0.0.1:5001/", 500);
+                            }
+                        })
+                        .catch(() => updateStatusText('Awaiting main server response...'));
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+{% extends "base_learning_path.html" %}
+
+{% block title %}Interactive Learning Path{% endblock %}
+
+{% block head_extra %}
+<style>
+    #learning-path-container {
+        display: flex;
+        flex-grow: 1;
+        min-height: 0;
+    }
+    #path-sidebar {
+        flex: 0 0 350px; /* Fixed width sidebar */
+        background-color: var(--bg-secondary);
+        border-right: 1px solid var(--border-color);
+        padding: 1.5rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    /* --- START OF FIX: Full-size content area --- */
+    #path-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        position: relative; /* For loader positioning */
+    }
+    #content-iframe {
+        width: 100%;
+        height: 100%;
+        border: none; /* Remove border for seamless look */
+        background-color: var(--bg-primary);
+    }
+    /* --- END OF FIX --- */
+    .step-item {
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        border: 1px solid transparent;
+    }
+    .step-item:hover {
+        background-color: var(--bg-tertiary);
+    }
+    .step-item.active {
+        background-color: var(--primary-accent);
+        color: #fff;
+        border-color: var(--primary-accent-hover);
+    }
+    .step-number {
+        font-weight: 700;
+        color: var(--primary-accent);
+    }
+    .step-item.active .step-number {
+        color: #fff;
+    }
+    #loader-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(13, 17, 23, 0.8);
+        display: none; /* Hidden by default */
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        flex-direction: column;
+        transition: opacity 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="learning-path-container">
+    <aside id="path-sidebar">
+        <h2 id="path-title" class="h4 mb-4">Loading...</h2>
+        <div id="steps-list">
+             <p class="text-muted">Loading steps...</p>
+        </div>
+    </aside>
+    <main id="path-content">
+        <div id="loader-overlay">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+            <p class="mt-3" id="loader-text">Loading Step...</p>
+        </div>
+        <iframe id="content-iframe" sandbox="allow-scripts"></iframe>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const pathId = '{{ path_id }}';
+    const pathTitleEl = document.getElementById('path-title');
+    const stepsListEl = document.getElementById('steps-list');
+    const iframeEl = document.getElementById('content-iframe');
+    const loaderOverlayEl = document.getElementById('loader-overlay');
+
+    let currentPath = null;
+
+    function initializeLearningPath() {
+        const allPaths = JSON.parse(localStorage.getItem('myLearningPaths') || '[]');
+        currentPath = allPaths.find(p => p.id.toString() === pathId);
+
+        if (!currentPath || !currentPath.pathData) {
+            pathTitleEl.textContent = "Error";
+            stepsListEl.innerHTML = `<div class="alert alert-danger">Could not load learning path data. It might have been deleted or is still generating.</div>`;
+            return;
+        }
+
+        renderSidebar(currentPath.pathData.path_title, currentPath.pathData.steps);
+        // Automatically load the first step
+        if (currentPath.pathData.steps && currentPath.pathData.steps.length > 0) {
+            loadStepContent(currentPath.pathData.steps[0].step);
+        }
+    }
+
+    function renderSidebar(title, steps) {
+        pathTitleEl.textContent = title;
+        stepsListEl.innerHTML = ''; // Clear message
+
+        steps.forEach(step => {
+            const stepEl = document.createElement('div');
+            stepEl.className = 'step-item mb-2';
+            stepEl.dataset.step = step.step;
+            stepEl.innerHTML = `
+                <h5 class="mb-1"><span class="step-number">Step ${step.step}:</span> ${step.title}</h5>
+                <p class="mb-0 small text-muted">${step.description}</p>
+            `;
+            stepsListEl.appendChild(stepEl);
+        });
+    }
+
+    function loadStepContent(stepNumber) {
+        document.querySelectorAll('.step-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.step == stepNumber);
+        });
+
+        showLoader();
+        iframeEl.src = `/learning-path/step-content/${currentPath.sourceDocId}/${stepNumber}`;
+    }
+
+    function showLoader() {
+        loaderOverlayEl.style.opacity = '1';
+        loaderOverlayEl.style.display = 'flex';
+    }
+
+    function hideLoader() {
+        loaderOverlayEl.style.opacity = '0';
+        setTimeout(() => {
+            loaderOverlayEl.style.display = 'none';
+        }, 300);
+    }
+    
+    stepsListEl.addEventListener('click', (e) => {
+        const stepItem = e.target.closest('.step-item');
+        if (stepItem && stepItem.dataset.step) {
+            loadStepContent(parseInt(stepItem.dataset.step, 10));
+        }
+    });
+    
+    iframeEl.addEventListener('load', hideLoader);
+
+    initializeLearningPath();
+});
+</script>
+{% endblock %}
