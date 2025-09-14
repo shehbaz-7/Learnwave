@@ -7,8 +7,6 @@
 
 Learnwave is a sophisticated, local-first desktop application designed to transform your study materials—PDFs and YouTube videos—into an interactive and intelligent learning hub. Powered by Google's Gemini Pro, it goes beyond simple file storage to create a personalized educational experience right on your machine.
 
-*(Placeholder for an application screenshot or GIF)*
-`![Learnwave Demo]()`
 
 ---
 
