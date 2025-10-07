@@ -1,118 +1,92 @@
-# Learnwave: Your Personal AI-Powered Learning Environment
+<div align="center">
+    <h1> AIGNITE 2K25</h1>
+    <h3>POWERED BY MLSC</h3>
+   <hr>
+</div>
+<div align="center">
+    <h1> 🚀LearnWave: The Verified AI Study Partner</h1>
+</div>
+**Learn smarter, not harder. Instantly convert your entire curriculum into a trusted, intelligent, and personalized study assistant.**
 
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-2.x-black?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com/)
-[![Google Gemini](https://img.shields.io/badge/Google-Gemini_Pro-4285F4?style=for-the-badge&logo=google)](https://ai.google.dev/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+<hr>  
+<h2><strong>💡 Problem & Solution</strong></h2>
 
-Learnwave is a sophisticated, local-first desktop application designed to transform your study materials—PDFs and YouTube videos—into an interactive and intelligent learning hub. Powered by Google's Gemini Pro, it goes beyond simple file storage to create a personalized educational experience right on your machine.
+### ✨ Problem Statement: The Crisis of Scattered Learning & AI Trust
+Students face a major crisis of learning efficiency due to **fragmented and scattered academic content** (PDFs, notes, lectures). Existing AI tools worsen this problem by lacking institutional access and failing to provide **citation-backed proof**, leading to low trust and wasted time. We challenge the standard: learning must be quick, accurate, and completely trustworthy.
 
+### 💡 Proposed Solution: The Verified Curriculum-to-Answer Pipeline
+LearnWave is a simple, secure, and technologically advanced platform that converts an entire, multi-modal curriculum into a verified, intelligent study partner.
 
----
+1.  **Content Ingestion:** Teachers upload all academic materials into a **Personalized My Space**, a secure, private cloud (with Google Drive sync).
+2.  **AI-Powered Transformation:** Uses **Multi-modal ingestion** (text, OCR, video processing) to transform raw content into intelligent, searchable data using **Flask** and a **FAISS vector database**.
+3.  **Citation-Backed Q&A:** Leverages **RAG** (Retrieval-Augmented Generation) and **Google Gemini** to instantly provide accurate, verifiable answers directly from the curriculum, complete with **proper citations**.
+4.  **Intelligent Study Tools:** Automatically creates personalized **quizzes, flashcards, and summaries** for highly effective revision.
+5.  **Dynamic Learning:** Enhances comprehension by auto-generating **animated explainer videos**.
 
-## Core Features
+***
 
-*   🧠 **AI-Powered Semantic Search & Chat:** Ask complex questions in natural language. The application understands the *context* of your query, searches its vector index for the most relevant passages from your documents, and uses Gemini to synthesize a comprehensive answer with precise source citations.
+## 🎯 Target Users & Use Cases
 
-*   📚 **Multi-Content Repository:** Effortlessly index and manage both PDF documents and YouTube videos. The system automatically processes content, performs OCR on image-based pages, and analyzes video transcripts to make everything searchable.
+### Target Users
+* **Students:** (Primary) Seeking fast, trusted answers and efficient revision from their own syllabus. (Includes Competitive Exam Aspirants, Distance Learners).
+* **Teachers / Professors:** Faculty who want to digitally manage course materials and automatically generate accurate teaching resources (quizzes, flashcards).
+* **Educational Institutions / Admins:** Seeking to securely digitize academic content and offer a trusted, AI-powered learning platform under their own ecosystem.
 
-*   🎓 **Automated Study Tools:** Instantly generate multiple-choice quizzes and flashcard decks from any document. You can specify the difficulty level and number of questions to create tailored study sessions that reinforce learning.
+### Key Use Cases
+1.  **Instant Q&A with Citations:** Students get verifiable answers directly from their uploaded curriculum, citing the exact page, note, or lecture timestamp.
+2.  **Smart Revision Companion:** AI automatically generates chapter summaries and quiz questions, streamlining pre-exam preparation.
+3.  **Secure Knowledge Hub:** Teachers upload materials to a private academic cloud, ensuring controlled access to authorized resources only.
+4.  **Multi-Modal Learning:** Video lectures, PDFs, and handwritten notes are processed and converted into searchable, interactive formats.
 
-*   🚀 **Interactive Learning Paths:** The "God-level" feature. Learnwave can analyze an entire document and automatically generate a multi-step, interactive learning path. Each step is a self-contained, beautifully animated HTML module designed to explain a core concept visually.
+***
 
-*   ☁️ **Google Drive Synchronization:** Designed for educational settings, an administrator can maintain a master library of content in Google Drive. Users (grouped by academic year) can then sync this curated library to their local machines, ensuring everyone has the latest materials.
+## 🔬 Methodology
 
-*   🔒 **Private & Secure:** The entire application runs locally. Your documents, search indices, and API keys are stored on your device, ensuring your data remains private.
+| Phase | Description | Key Focus |
+| :--- | :--- | :--- |
+| **Research & Ideation** | Defined the core problem of fragmented learning and low trust in generic AI tools. | Dynamic Learning, Verified Content, Enhanced Success |
+| **Design** | Created intuitive UI/UX dashboards (Figma) and designed a modular system architecture. | Engagement, Flexibility, and Verified Access |
+| **Develop** | Implemented core features using the RAG algorithm, FAISS Vector DB, and Google Gemini. Used OCR/STT for multi-modal ingestion. | Backend: **Flask (Python)** |
+| **Test** | Performed unit/integration tests and gathered user feedback on retrieval accuracy and citation clarity. | Retrieval Accuracy & Verifiability |
+| **Deploy** | Hosted a demo version for live interaction and collected initial performance metrics. | Live Institutional Testing |
 
----
+### 🔮 Future Scope
+* **AI Tutor Mode:** Voice-based Q&A for increased accessibility.
+* **Analytics Dashboard:** Providing teachers with performance and engagement insights.
+* **Offline Learning Mode:** Cached Q&A and materials for low-connectivity regions.
 
-## Tech Stack
+***
 
-*   **Backend:** Python, Flask, Waitress
-*   **AI & Machine Learning:**
-    *   Google Gemini Pro for chat, analysis, and content generation.
-    *   `sentence-transformers` for creating text embeddings.
-    *   `faiss` (from Facebook AI) for efficient similarity search in the vector database.
-*   **Database:** SQLAlchemy with SQLite for application and user data.
-*   **File Processing:** PyPDF2 for text extraction, Google Drive API for cloud sync.
-*   **Frontend:** Standard HTML, CSS, JavaScript with Bootstrap 5 for styling.
-*   **Packaging:** PyInstaller (intended use) to create a standalone desktop application.
+## 🛠️ Technology Stack
 
----
+| Category | Technologies Used |
+| :--- | :--- |
+| **Backend** | **Python** (Flask) |
+| **Frontend** | **React** |
+| **Database/Storage** | **FAISS** (Vector DB), **Firebase** |
+| **AI/ML** | **Google Gemini** (LLM), **TensorFlow** (BERT for Embeddings) |
+| **Core Algorithm** | Retrieval-Augmented Generation (RAG) |
 
-## Setup and Installation
+***
 
-Follow these steps to get a local development environment running.
+## 👥 Team Details
 
-### Prerequisites
+| Team Name: | **LearnWave** | |
+| :--- | :--- | :--- |
+| **Name** | **Role** | **Email** |
+| M SAI ROHIT | Team Lead | rohit5461474@gmail.com |
+| M SAINATH | Team Member | 24h51a05v2@cmrcet.ac.in |
+| MD SHEHBAZUDDIN | Team Member | 24h51a05v6@cmrcet.ac.in |
+| M MANOHAR | Team Member | 24h51a05v1@cmrcet.ac.in |
 
-*   Python 3.9+ and `pip`
-*   Git
-*   A Google Account
+***
 
-### 1. Set Up Google Drive API Credentials
-
-1.  Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2.  Create a new project.
-3.  Enable the **Google Drive API** for your project.
-4.  Go to "Credentials", click "Create Credentials" -> "OAuth client ID".
-5.  Choose "Desktop app" as the application type.
-6.  Download the JSON file. Rename it to `credentials.json` and place it in the root directory of this project. **This file is critical for authentication.**
-
-### 2. Set Up Your Gemini API Key
-
-1.  Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
-2.  Click "Create API key" and copy your new key. You will need to enter this in the application's UI after registering.
-
-### 3. Clone & Install Dependencies
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/learnwave.git
-cd learnwave
-
-# Create and activate a virtual environment
-python -m venv venv
-# On Windows
-venv\Scripts\activate
-# On macOS/Linux
-source venv/bin/activate
-
-# Install the required packages
-pip install -r requirements.txt
-```
-*(Note: A `requirements.txt` file would need to be generated with `pip freeze > requirements.txt`)*
-
-### 4. Configure Google Drive Folders
-
-1.  In Google Drive, create folders for each academic year and an "Admin" folder.
-2.  Get the ID for each folder from its URL (`https://drive.google.com/drive/folders/THIS_IS_THE_ID`).
-3.  In `main.py`, update the `YEAR_FOLDER_IDS` dictionary with your folder IDs.
-
-### 5. Run the Application
-
-```bash
-python run.py
-```
-
-The application will start two servers:
-*   A preloader/startup server on `http://127.0.0.1:5000`
-*   The main Flask application on `http://127.0.0.1:5001`
-
-A browser window should automatically open to the startup loader. Once the backend initializes, it will redirect to the main application.
-
----
-
-## How It Works
-
-1.  **Initialization (`run.py`):** A lightweight Flask app (`preloader_app`) starts on port 5000, showing a loading screen while the main application initializes in a separate thread.
-2.  **Authentication (`google_auth.py`):** The main app first authenticates with Google. On the first run, this opens a browser window for you to grant the app permission to access your Google Drive. It saves a `token.json` for future sessions.
-3.  **User Registration:** You create a local account, providing your Gemini API key and selecting your academic year.
-4.  **Syncing (`routes.py` -> `/loading`):** The app checks for local data corresponding to your selected year. If it doesn't exist, it syncs all the files from the configured Google Drive folder for that year.
-5.  **Processing (Admin):** When an admin uploads a PDF or YouTube video, a background thread is spawned.
-    *   **PDFs (`pdf_processor.py`):** Text is extracted from each page. If a page has little text, it's treated as an image and sent to Gemini's multimodal endpoint for visual analysis (OCR + description).
-    *   **Videos (`youtube_processor.py`):** The video is sent to Gemini for a full, time-stamped transcript analysis.
-    *   **Indexing:** The content of each page/segment is analyzed by Gemini to generate titles, topics, and a rich `ENHANCED_TEXT` description optimized for vector search.
-6.  **Vector Database (`vector_db.py`):** The `ENHANCED_TEXT` from each chunk is converted into a vector embedding and stored in a local FAISS index. This allows for incredibly fast and accurate semantic search.
-7.  **Chat (`routes.py` -> `/chat/message`):** Your question is first refined by Gemini based on conversation history. The refined query is used to search the FAISS index. The top results (context) are then sent back to Gemini along with your original question to generate a final, cited answer.
-
+ **📹 Demonstration Video**   
+ ▶️ YouTube / Google Drive Link  
+ **🌐 Deployment**  
+ link   
+ **📚 References**  
+ resources  
+ **🖼️ Assets / Screenshots  
+ 
+ 
