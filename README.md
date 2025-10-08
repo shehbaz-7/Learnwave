@@ -99,6 +99,8 @@ Gamified Learning: Strategies for increased student engagement
 
  **🖼️ Assets / Screenshots  
  <img width="1920" height="1200" alt="Screenshot 2025-10-08 094719 1" src="https://github.com/user-attachments/assets/b1ca16df-debd-4b4a-b434-9d0e65b52b1a" />  
+ <img width="2243" height="1404" alt="image" src="https://github.com/user-attachments/assets/2da7242b-b1cc-4162-90a7-482e2de8723d" />
+
  <img width="1920" height="1200" alt="Screenshot 2025-10-08 094844 1" src="https://github.com/user-attachments/assets/98c04cd1-d184-4bf0-8b7c-966c924143e9" />  
  <img width="1920" height="1200" alt="Screenshot 2025-10-08 095110 1" src="https://github.com/user-attachments/assets/52d45537-26f9-4ae4-83d6-58931a51eabe" />
 <img width="1920" height="1200" alt="Screenshot 2025-10-08 094624 1" src="https://github.com/user-attachments/assets/0ebb119d-0423-4689-97de-bc7dc9854c2a" />  
