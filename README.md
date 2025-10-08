@@ -82,11 +82,30 @@ LearnWave is a simple, secure, and technologically advanced platform that conver
 ***
 
  **📹 Demonstration Video**   
- ▶️ YouTube / Google Drive Link  
+https://drive.google.com/drive/u/0/folders/1ud9HYFAUL6vrMr-au16Wiz8VjGhlvlbU  
+
  **🌐 Deployment**  
- link   
+app   
+
  **📚 References**  
- resources  
+Foundational Research  
+
+AI in Smart Education: Exploring personalized learning systems.  
+
+Retrieval-Augmented Generation (RAG): Enhancing factual accuracy in LLMs.  
+
+Gamified Learning: Strategies for increased student engagement  
+
+
  **🖼️ Assets / Screenshots  
+ <img width="1920" height="1200" alt="Screenshot 2025-10-08 094719 1" src="https://github.com/user-attachments/assets/b1ca16df-debd-4b4a-b434-9d0e65b52b1a" />  
+ <img width="1920" height="1200" alt="Screenshot 2025-10-08 094844 1" src="https://github.com/user-attachments/assets/98c04cd1-d184-4bf0-8b7c-966c924143e9" />  
+ <img width="1920" height="1200" alt="Screenshot 2025-10-08 095110 1" src="https://github.com/user-attachments/assets/52d45537-26f9-4ae4-83d6-58931a51eabe" />
+<img width="1920" height="1200" alt="Screenshot 2025-10-08 094624 1" src="https://github.com/user-attachments/assets/0ebb119d-0423-4689-97de-bc7dc9854c2a" />  
+<img width="1920" height="1200" alt="Screenshot 2025-10-08 094931 1" src="https://github.com/user-attachments/assets/87e5b1c7-15d5-4516-a2e4-61c37898575b" />
+
+
+
+
  
  
